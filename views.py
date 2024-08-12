@@ -7,9 +7,13 @@ class RequestHandler(BaseHTTPRequestHandler):
     client_controller = ClientController()
     contact_controller = ContactController()
 
-    def _set_headers(self, status=200):
-        self.send_response(status)
+    def _set_headers(self):
+        self.send_response(200)
         self.send_header('Content-type', 'application/json')
+        # Add CORS headers
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'X-Requested-With, Content-type')
         self.end_headers()
 
     def do_GET(self):
