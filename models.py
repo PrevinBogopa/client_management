@@ -22,6 +22,13 @@ class Database:
         self.cursor.execute(query, params)
         return self.cursor.fetchone()
 
+    def __del__(self):
+        # Close the cursor and connection when the object is destroyed
+        if hasattr(self, 'cursor'):
+            self.cursor.close()
+        if hasattr(self, 'conn'):
+            self.conn.close()
+
 class Client:
     def __init__(self, db):
         self.db = db
@@ -41,7 +48,10 @@ class Client:
 class Contact:
     def __init__(self, db):
         self.db = db
-
+    def count_linked_contacts(self, client_id):
+        query = "SELECT COUNT(*) AS count FROM client_contacts WHERE client_id = %s"
+        result = self.db.fetch_one(query, (client_id,))
+        return result['count'] if result else 0
     def create(self, name, surname, email):
         query = "INSERT INTO contacts (name, surname, email) VALUES (%s, %s, %s)"
         self.db.execute_query(query, (name, surname, email))

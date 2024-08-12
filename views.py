@@ -1,19 +1,28 @@
 import json
 from http.server import BaseHTTPRequestHandler
+
+import mysql
+
 from controllers import ClientController, ContactController
 
 
 class RequestHandler(BaseHTTPRequestHandler):
-    client_controller = ClientController()
-    contact_controller = ContactController()
+    def __init__(self, *args, **kwargs):
+        self.client_controller = ClientController()
+        self.contact_controller = ContactController(self.client_controller)  # Pass the instance
+        super().__init__(*args, **kwargs)
 
-    def _set_headers(self):
-        self.send_response(200)
+    def _set_headers(self, status_code=200):
+        self.send_response(status_code)
         self.send_header('Content-type', 'application/json')
         # Add CORS headers
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'X-Requested-With, Content-type')
+        self.end_headers()
+
+    def do_OPTIONS(self):
+        self._set_headers()
         self.end_headers()
 
     def do_GET(self):
@@ -70,19 +79,36 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'error': 'Name, surname, and email are required'}).encode())
             return
 
-        self.contact_controller.create_contact(name, surname, email)
-        self._set_headers(201)
-        self.wfile.write(json.dumps({'message': f"Contact '{name} {surname}' created"}).encode())
+        try:
+            self.contact_controller.create_contact(name, surname, email)
+            self._set_headers(201)
+            self.wfile.write(json.dumps({'message': f"Contact '{name} {surname}' created"}).encode())
+        except mysql.connector.errors.IntegrityError as e:
+            if e.errno == 1062:  # Duplicate entry error
+                self._set_headers(400)
+                self.wfile.write(json.dumps({'error': 'Email already exists'}).encode())
+            else:
+                self._set_headers(500)
+                self.wfile.write(json.dumps({'error': 'Internal Server Error'}).encode())
+
+    # views.py
+
 
     def handle_link_contact_to_client(self, data):
         client_code = data.get('client_code')
         contact_email = data.get('contact_email')
 
+        # Validate input
+        if not client_code or not contact_email:
+            self._set_headers(400)
+            self.wfile.write(json.dumps({'error': 'Client code and contact email are required'}).encode())
+            return
+
         try:
             self.contact_controller.link_contact_to_client(client_code, contact_email)
             self._set_headers(200)
-            self.wfile.write(
-                json.dumps({'message': f"Contact '{contact_email}' linked to client '{client_code}'"}).encode())
+            self.wfile.write(json.dumps({'message': f"Contact linked to client '{client_code}'"}).encode())
+
         except Exception as e:
             self._set_headers(400)
             self.wfile.write(json.dumps({'error': str(e)}).encode())
