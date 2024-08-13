@@ -15,7 +15,7 @@ class RequestHandler(BaseHTTPRequestHandler):
     def _set_headers(self, status_code=200):
         self.send_response(status_code)
         self.send_header('Content-type', 'application/json')
-        # Add CORS headers
+
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE')
         self.send_header('Access-Control-Allow-Headers', 'X-Requested-With, Content-type')
@@ -64,7 +64,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({'error': 'Not found'}).encode())
 
     def handle_unlink_client_from_contact(self):
-        # Extract contact_email and client_code from the URL
+
         parts = self.path.split('/')
         if len(parts) != 4:
             self._set_headers(400)
@@ -74,7 +74,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         contact_email = parts[2]
         client_code = parts[3]
 
-        # Get contact and client information
+
         contact = self.contact_controller.get_by_email(contact_email)
         if not contact:
             self._set_headers(404)
