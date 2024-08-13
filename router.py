@@ -3,7 +3,8 @@ from http.server import BaseHTTPRequestHandler
 
 import mysql
 
-from controllers import ClientController, ContactController
+from controllers.controllers import ClientController, ContactController
+from controllers.linking_controller import LinkingController
 
 
 def handle_not_found(self, resource, resource_name):
@@ -17,7 +18,8 @@ def handle_not_found(self, resource, resource_name):
 class RequestHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         self.client_controller = ClientController()
-        self.contact_controller = ContactController(self.client_controller)  # Pass the instance
+        self.contact_controller = ContactController(self.client_controller)
+        self.linking_controller = LinkingController(self.client_controller, self.contact_controller)
         super().__init__(*args, **kwargs)
 
     def _set_headers(self, status_code=200):
@@ -62,81 +64,28 @@ class RequestHandler(BaseHTTPRequestHandler):
             self._set_headers(404)
             self.wfile.write(json.dumps({'error': 'Not found'}).encode())
 
+    def write_response(self, data):
+        self.wfile.write(json.dumps(data).encode())
+
     def do_DELETE(self):
         if self.path.startswith('/unlink_contact_from_client/'):
-            self.handle_unlink_contact_from_client()
+            self.linking_controller.unlink_contact_from_client(self.path, self._set_headers, self.write_response)
         elif self.path.startswith('/unlink_client_from_contact/'):
-            self.handle_unlink_client_from_contact()
+            self.linking_controller.unlink_client_from_contact(self.path, self._set_headers, self.write_response)
         else:
             self._set_headers(404)
-            self.wfile.write(json.dumps({'error': 'Not found'}).encode())
+            self.write_response({'error': 'Not found'})
 
-    def handle_unlink_client_from_contact(self):
-
-        parts = self.path.split('/')
-        if len(parts) != 4:
-            self._set_headers(400)
-            self.wfile.write(json.dumps({'error': 'Invalid URL format'}).encode())
-            return
-
-        contact_email = parts[2]
-        client_code = parts[3]
-
-        contact = self.contact_controller.get_by_email(contact_email)
-        if handle_not_found(contact, 'Contact'):
-            return
-
-        client = self.client_controller.get_by_code(client_code)
-        if handle_not_found(client, 'Client'):
-            return
-
-        try:
-            self.contact_controller.unlink_client_from_contact(contact['id'], client['id'])
-            self._set_headers(200)
-            self.wfile.write(json.dumps(
-                {'message': f"Client '{client_code}' unlinked from contact '{contact_email}'"}).encode())
-        except Exception as e:
-            self._set_headers(500)
-            self.wfile.write(json.dumps({'error': str(e)}).encode())
-
-    def handle_unlink_contact_from_client(self):
-        # Extract client_code and contact_email from the URL
-        parts = self.path.split('/')
-        if len(parts) != 4:
-            self._set_headers(400)
-            self.wfile.write(json.dumps({'error': 'Invalid URL format'}).encode())
-            return
-
-        client_code = parts[2]
-        contact_email = parts[3]
-
-        # Get client and contact information
-        client = self.client_controller.get_by_code(client_code)
-        if handle_not_found(client, 'Client'):
-            return
-
-        contact = self.contact_controller.get_by_email(contact_email)
-        if handle_not_found(contact, 'Contact'):
-            return
-
-        try:
-            self.contact_controller.unlink_contact_from_client(client['id'], contact['id'])
-            self._set_headers(200)
-            self.wfile.write(json.dumps(
-                {'message': f"Contact '{contact_email}' unlinked from client '{client_code}'"}).encode())
-        except Exception as e:
-            self._set_headers(500)
-            self.wfile.write(json.dumps({'error': str(e)}).encode())
+    def handle_list(self, list_method, resource_name):
+        resources = list_method()
+        self._set_headers()
+        self.wfile.write(json.dumps(resources).encode())
 
     def handle_list_clients(self):
-        clients = self.client_controller.list_clients()
-        self._set_headers()
-        self.wfile.write(json.dumps(clients).encode())
+        self.handle_list(self.client_controller.list_clients, 'Clients')
 
     def handle_list_contacts(self):
-        contacts = self.contact_controller.list_contacts()
-        self._set_headers()
-        self.wfile.write(json.dumps(contacts).encode())
+        self.handle_list(self.contact_controller.list_contacts, 'Contacts')
 
     def handle_create_client(self, data):
         name = data.get('name')
@@ -172,7 +121,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({'error': 'Internal Server Error'}).encode())
 
     def handle_list_linked_contacts(self):
-        client_id = self.path.split('/')[2]  # Assuming path like /clients/{client_id}/contacts
+        client_id = self.path.split('/')[2]  # Extract client_id from the URL
         try:
             linked_contacts = self.contact_controller.list_linked_contacts(client_id)
             self._set_headers()
@@ -234,7 +183,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # Get contact information
         contact = self.contact_controller.get_by_email(contact_email)
-        if handle_not_found(contact, 'Contact'):
+        if handle_not_found(self, contact, 'Contact'):
             return
 
         try:
@@ -257,7 +206,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         # Get contact information
         contact = self.contact_controller.get_by_email(contact_email)
-        if  handle_not_found(contact, 'Contact'):
+        if handle_not_found(self, contact, 'Contact'):
             return
 
         # List linked clients for the contact
