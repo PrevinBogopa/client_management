@@ -81,6 +81,24 @@ class Contact:
         query = "SELECT id FROM contacts WHERE email = %s"
         return self.db.fetch_one(query, (email,))
 
+    def list_linked_to_client(self, client_id):
+        query = """
+        SELECT 
+            c.id, c.name, c.surname, c.email
+        FROM 
+            contacts c
+            JOIN client_contacts cc ON c.id = cc.contact_id
+        WHERE 
+            cc.client_id = %s
+        ORDER BY 
+            c.surname ASC, c.name ASC
+        """
+        return self.db.fetch_all(query, (client_id,))
+
+    def unlink_from_client(self, client_id, contact_id):
+        query = "DELETE FROM client_contacts WHERE client_id = %s AND contact_id = %s"
+        self.db.execute_query(query, (client_id, contact_id))
+
     def link_to_client(self, client_id, contact_id):
         query = "INSERT INTO client_contacts (client_id, contact_id) VALUES (%s, %s)"
         self.db.execute_query(query, (client_id, contact_id))

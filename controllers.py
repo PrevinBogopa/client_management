@@ -2,12 +2,12 @@ import mysql
 
 from models import Client, Contact, Database
 
+
 class ClientController:
     def __init__(self):
         self.db = Database()
         self.client_model = Client(self.db)
         self.contact_model = Contact(self.db)  # Add Contact model for counting linked contacts
-
 
     def create_client(self, name):
         client_code = self.generate_client_code(name)
@@ -22,7 +22,19 @@ class ClientController:
             client['contact_count'] = self.contact_model.count_linked_contacts(client['id'])
 
         return clients
-
+    def list_linked_clients(self, contact_id):
+        query = """
+        SELECT 
+            c.id, c.name, c.client_code
+        FROM 
+            clients c
+            JOIN client_contacts cc ON c.id = cc.client_id
+        WHERE 
+            cc.contact_id = %s
+        ORDER BY 
+            c.name ASC
+        """
+        return self.db.fetch_all(query, (contact_id,))
     def generate_client_code(self, name):
         code = ''.join([c for c in name[:3].upper() if c.isalpha()]).ljust(3, 'A')
         counter = 1
@@ -35,15 +47,34 @@ class ClientController:
         return generated_code
 
     def get_by_code(self, client_code):
-        return self.client_model.get_by_code(client_code)  # Ensure this method is present
-
-
+        client = self.client_model.get_by_code(client_code)
+        if not client:
+            print(f"Client with code '{client_code}' not found")
+        return client
 class ContactController:
     def __init__(self, client_controller):
         self.db = Database()
         self.contact_model = Contact(self.db)
         self.client_controller = client_controller  # Inject ClientController instance
 
+    def get_by_email(self, email):
+        return self.contact_model.get_by_email(email)
+
+    def unlink_client_from_contact(self, contact_id, client_id):
+        query = "DELETE FROM client_contacts WHERE contact_id = %s AND client_id = %s"
+        self.db.execute_query(query, (contact_id, client_id))
+
+    def list_linked_contacts(self, client_code):
+        client = self.client_controller.get_by_code(client_code)
+        if not client:
+            raise Exception(f"Client with code '{client_code}' not found")
+
+        client_id = client['id']
+        return self.contact_model.list_linked_to_client(client_id)
+
+    def unlink_contact_from_client(self, client_id, contact_id):
+        query = "DELETE FROM client_contacts WHERE client_id = %s AND contact_id = %s"
+        self.db.execute_query(query, (client_id, contact_id))
     def create_contact(self, name, surname, email):
         self.contact_model.create(name, surname, email)
 
