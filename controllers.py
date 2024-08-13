@@ -1,7 +1,8 @@
 import mysql
 
-from models import Client, Contact, Database
-
+from models.clients_model import Client
+from models.contacts_model import Contact
+from models.database_model import Database
 
 class ClientController:
     def __init__(self):

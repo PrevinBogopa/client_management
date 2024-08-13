@@ -268,3 +268,51 @@ class RequestHandler(BaseHTTPRequestHandler):
         clients = self.client_controller.list_linked_clients(contact['id'])
         self._set_headers()
         self.wfile.write(json.dumps(clients).encode())
+
+# #
+# # //Routes.client...contacts..etc,polymofysms....controlle rconnect response from model to req...router...endpoint to front end.database helpeer...data laye
+# deepedndeny injections.....solid..principel
+#
+#
+# OOP
+# Abstraction
+# Encapsulation
+# inheritance
+# polymorphism
+# SOLID-> models
+# Single Responsibility Principle
+# Open/Closed Principle
+# dry Principle->routes
+# Dependencyinjection->routes
+#
+# algorithms
+#         data structures
+#
+#         OOP
+#         =============
+#         Abstraction
+#         Inheritance
+#         encapsulation
+#         polymorphism
+#
+#         Design Principle
+#         ==================
+#         SOLID Principles => models
+#         Dry Principle => routes
+#
+#         Design Patterns
+#         ================
+#         Dependency Injection => routes
+#         Factory Design Pattern =>
+#
+#
+#
+# Improvements
+# I would recommend a bulk import of clients and contacts
+# I would allow soft deletion of
+# Improvements
+# I would recommend a bulk import of clients and contacts
+# I would allow soft deletion of clients and contacts so that if the user delete person by mistake they have an oppurtunity to retrieve that data (Because of POPPIA we should have an expiry date of how long we can store the deleted data before hard delete)
+# Multiple delete of clients and contacts
+# //rename database to Relationshi|
+# cascading relationsSHip
