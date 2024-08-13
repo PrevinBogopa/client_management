@@ -48,16 +48,33 @@ class Client:
 class Contact:
     def __init__(self, db):
         self.db = db
+
     def count_linked_contacts(self, client_id):
-        query = "SELECT COUNT(*) AS count FROM client_contacts WHERE client_id = %s"
+        query = """
+        SELECT COUNT(DISTINCT contact_id) AS count 
+        FROM client_contacts 
+        WHERE client_id = %s
+        """
         result = self.db.fetch_one(query, (client_id,))
         return result['count'] if result else 0
+
     def create(self, name, surname, email):
         query = "INSERT INTO contacts (name, surname, email) VALUES (%s, %s, %s)"
         self.db.execute_query(query, (name, surname, email))
 
     def list(self):
-        query = "SELECT id, name, surname, email FROM contacts ORDER BY surname ASC, name ASC"
+        query = """
+        SELECT 
+            c.id, c.name, c.surname, c.email,
+            COUNT(cc.client_id) AS linked_clients_count
+        FROM 
+            contacts c
+            LEFT JOIN client_contacts cc ON c.id = cc.contact_id
+        GROUP BY 
+            c.id, c.name, c.surname, c.email
+        ORDER BY 
+            c.surname ASC, c.name ASC
+        """
         return self.db.fetch_all(query)
 
     def get_by_email(self, email):

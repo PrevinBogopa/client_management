@@ -93,22 +93,43 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     # views.py
 
-
     def handle_link_contact_to_client(self, data):
-        client_code = data.get('client_code')
-        contact_email = data.get('contact_email')
+        client_codes = data.get('client_code')
+        contact_emails = data.get('contact_email')
 
-        # Validate input
-        if not client_code or not contact_email:
+        if not client_codes or not contact_emails:
             self._set_headers(400)
-            self.wfile.write(json.dumps({'error': 'Client code and contact email are required'}).encode())
+            self.wfile.write(json.dumps({'error': 'Client code(s) and contact email(s) are required'}).encode())
             return
 
-        try:
-            self.contact_controller.link_contact_to_client(client_code, contact_email)
-            self._set_headers(200)
-            self.wfile.write(json.dumps({'message': f"Contact linked to client '{client_code}'"}).encode())
+        if isinstance(client_codes, str):
+            client_codes = [client_codes]
+        if isinstance(contact_emails, str):
+            contact_emails = [contact_emails]
 
-        except Exception as e:
-            self._set_headers(400)
-            self.wfile.write(json.dumps({'error': str(e)}).encode())
+        linked_contacts = []
+        errors = []
+
+        for client_code in client_codes:
+            for contact_email in contact_emails:
+                try:
+                    self.contact_controller.link_contact_to_client(client_code, contact_email)
+                    linked_contacts.append({
+                        'client_code': client_code,
+                        'contact_email': contact_email,
+                        'status': 'linked'
+                    })
+                except Exception as e:
+                    errors.append({
+                        'client_code': client_code,
+                        'contact_email': contact_email,
+                        'error': str(e)
+                    })
+
+        response = {
+            'linked_contacts': linked_contacts,
+            'errors': errors
+        }
+
+        self._set_headers(200 if not errors else 207)  # 207 Multi-Status for partial success
+        self.wfile.write(json.dumps(response).encode())
