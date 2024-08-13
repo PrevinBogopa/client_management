@@ -5,7 +5,8 @@ import mysql
 
 from controllers.controllers import ClientController, ContactController
 from controllers.linking_controller import LinkingController
-
+from controllers.linked_controller import LinkedController
+# from utils import _set_headers, handle_not_found
 
 def handle_not_found(self, resource, resource_name):
     if not resource:
@@ -20,6 +21,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.client_controller = ClientController()
         self.contact_controller = ContactController(self.client_controller)
         self.linking_controller = LinkingController(self.client_controller, self.contact_controller)
+        self.linked_controller = LinkedController(self.client_controller, self.contact_controller)
         super().__init__(*args, **kwargs)
 
     def _set_headers(self, status_code=200):
@@ -39,16 +41,16 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path == '/clients':
             self.handle_list_clients()
         elif self.path.startswith('/contacts/') and self.path.endswith('/clients'):
-            self.handle_list_linked_clients_for_contact()
+            self.linked_controller.list_linked_clients_for_contact(self.path, self._set_headers, self.write_response)
         elif self.path.startswith('/clients/') and self.path.endswith('/contacts'):
-            self.handle_list_linked_contacts()
+            self.linked_controller.list_linked_contacts(self.path, self._set_headers, self.write_response)
         elif self.path.startswith('/contacts/') and len(self.path.split('/')) == 3:
-            self.handle_list_linked_clients()
+            self.linked_controller.list_linked_clients(self.path, self._set_headers, self.write_response)
         elif self.path == '/contacts':
             self.handle_list_contacts()
         else:
             self._set_headers(404)
-            self.wfile.write(json.dumps({'error': 'Not found'}).encode())
+            self.write_response({'error': 'Not found'})
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
@@ -59,10 +61,10 @@ class RequestHandler(BaseHTTPRequestHandler):
         elif self.path == '/contacts':
             self.handle_create_contact(post_data)
         elif self.path == '/link_contact_to_client':
-            self.handle_link_contact_to_client(post_data)
+            self.linked_controller.link_contact_to_client(post_data, self._set_headers, self.write_response)
         else:
             self._set_headers(404)
-            self.wfile.write(json.dumps({'error': 'Not found'}).encode())
+            self.write_response({'error': 'Not found'})
 
     def write_response(self, data):
         self.wfile.write(json.dumps(data).encode())
@@ -120,99 +122,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                 self._set_headers(500)
                 self.wfile.write(json.dumps({'error': 'Internal Server Error'}).encode())
 
-    def handle_list_linked_contacts(self):
-        client_id = self.path.split('/')[2]  # Extract client_id from the URL
-        try:
-            linked_contacts = self.contact_controller.list_linked_contacts(client_id)
-            self._set_headers()
-            self.wfile.write(json.dumps(linked_contacts).encode())
-        except Exception as e:
-            self._set_headers(500)
-            self.wfile.write(json.dumps({'error': str(e)}).encode())
 
-    def handle_link_contact_to_client(self, data):
-        client_codes = data.get('client_code')
-        contact_emails = data.get('contact_email')
-
-        if not client_codes or not contact_emails:
-            self._set_headers(400)
-            self.wfile.write(json.dumps({'error': 'Client code(s) and contact email(s) are required'}).encode())
-            return
-
-        if isinstance(client_codes, str):
-            client_codes = [client_codes]
-        if isinstance(contact_emails, str):
-            contact_emails = [contact_emails]
-
-        linked_contacts = []
-        errors = []
-
-        for client_code in client_codes:
-            for contact_email in contact_emails:
-                try:
-                    self.contact_controller.link_contact_to_client(client_code, contact_email)
-                    linked_contacts.append({
-                        'client_code': client_code,
-                        'contact_email': contact_email,
-                        'status': 'linked'
-                    })
-                except Exception as e:
-                    errors.append({
-                        'client_code': client_code,
-                        'contact_email': contact_email,
-                        'error': str(e)
-                    })
-
-        response = {
-            'linked_contacts': linked_contacts,
-            'errors': errors
-        }
-
-        self._set_headers(200 if not errors else 207)  # 207 Multi-Status for partial success
-        self.wfile.write(json.dumps(response).encode())
-
-    def handle_list_linked_clients(self):
-        # Extract contact_email from the URL
-        parts = self.path.split('/')
-        if len(parts) != 3:
-            self._set_headers(400)
-            self.wfile.write(json.dumps({'error': 'Invalid URL format'}).encode())
-            return
-
-        contact_email = parts[2]
-
-        # Get contact information
-        contact = self.contact_controller.get_by_email(contact_email)
-        if handle_not_found(self, contact, 'Contact'):
-            return
-
-        try:
-            linked_clients = self.client_controller.list_linked_clients(contact['id'])
-            self._set_headers()
-            self.wfile.write(json.dumps(linked_clients).encode())
-        except Exception as e:
-            self._set_headers(500)
-            self.wfile.write(json.dumps({'error': str(e)}).encode())
-
-    def handle_list_linked_clients_for_contact(self):
-        # Extract contact email from the URL
-        parts = self.path.split('/')
-        if len(parts) != 4:
-            self._set_headers(400)
-            self.wfile.write(json.dumps({'error': 'Invalid URL format'}).encode())
-            return
-
-        contact_email = parts[2]
-
-        # Get contact information
-        contact = self.contact_controller.get_by_email(contact_email)
-        if handle_not_found(self, contact, 'Contact'):
-            return
-
-        # List linked clients for the contact
-        clients = self.client_controller.list_linked_clients(contact['id'])
-        self._set_headers()
-        self.wfile.write(json.dumps(clients).encode())
 
 # #
 # # //Routes.client...contacts..etc,polymofysms....controlle rconnect response from model to req...router...endpoint to front end.database helpeer...data laye
