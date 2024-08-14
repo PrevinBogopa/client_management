@@ -1,11 +1,15 @@
-Here's a rewritten README file that includes the text:
-DataCapture Backend
-Overview
+# **DataCapture Backend**
+
+## Overview
+
 DataCapture is a Python-based backend application built using the Model-View-Controller (MVC) architectural pattern and Object-Oriented Programming (OOP) principles. This repository contains the backend logic, with a separate repository for the React-based frontend (link below).
-Repository Structure
+
+### Repository Structure
+
 The repository is organized into the following main directories:
-app.py: The main application entry point.
-controllers: Contains the controller modules, responsible for handling business logic.
+
+_app.py:_ The main application entry point.
+_controllers_: Contains the controller modules, responsible for handling business logic.
 controllers.py: Base controller class.
 creation_controller.py: Handles data creation logic.
 linked_controller.py: Handles linked data logic.

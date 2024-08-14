@@ -1,0 +1,17 @@
+# Frameworks
+Flask==2.2.2
+
+# HTTP Server
+http.server==0.0.4
+
+# Database
+mysql-connector-python==8.0.31
+
+# ORM (optional)
+flask-sqlalchemy==2.5.1
+
+# JSON Handling
+json==2.0.9
+
+# Other dependencies
+python-dotenv==0.21.0
