@@ -5,7 +5,7 @@ class Contact:
     def count_linked_contacts(self, client_id):
         query = """
         SELECT COUNT(DISTINCT contact_id) AS count 
-        FROM client_contacts 
+        FROM relationships 
         WHERE client_id = %s
         """
         result = self.db.fetch_one(query, (client_id,))
@@ -19,10 +19,10 @@ class Contact:
         query = """
         SELECT 
             c.id, c.name, c.surname, c.email,
-            COUNT(cc.client_id) AS linked_clients_count
+            COUNT(r.client_id) AS linked_clients_count
         FROM 
             contacts c
-            LEFT JOIN client_contacts cc ON c.id = cc.contact_id
+            LEFT JOIN relationships r ON c.id = r.contact_id
         GROUP BY 
             c.id, c.name, c.surname, c.email
         ORDER BY 
@@ -40,18 +40,18 @@ class Contact:
             c.id, c.name, c.surname, c.email
         FROM 
             contacts c
-            JOIN client_contacts cc ON c.id = cc.contact_id
+            JOIN relationships r ON c.id = r.contact_id
         WHERE 
-            cc.client_id = %s
+            r.client_id = %s
         ORDER BY 
             c.surname ASC, c.name ASC
         """
         return self.db.fetch_all(query, (client_id,))
 
     def unlink_from_client(self, client_id, contact_id):
-        query = "DELETE FROM client_contacts WHERE client_id = %s AND contact_id = %s"
+        query = "DELETE FROM relationships WHERE client_id = %s AND contact_id = %s"
         self.db.execute_query(query, (client_id, contact_id))
 
     def link_to_client(self, client_id, contact_id):
-        query = "INSERT INTO client_contacts (client_id, contact_id) VALUES (%s, %s)"
+        query = "INSERT INTO relationships (client_id, contact_id) VALUES (%s, %s)"
         self.db.execute_query(query, (client_id, contact_id))

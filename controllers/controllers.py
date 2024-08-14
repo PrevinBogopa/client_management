@@ -29,7 +29,7 @@ class ClientController:
             c.id, c.name, c.client_code
         FROM 
             clients c
-            JOIN client_contacts cc ON c.id = cc.client_id
+            JOIN relationships cc ON c.id = cc.client_id
         WHERE 
             cc.contact_id = %s
         ORDER BY 
@@ -68,7 +68,7 @@ class ContactController:
         return self.contact_model.get_by_email(email)
 
     def unlink_client_from_contact(self, contact_id, client_id):
-        query = "DELETE FROM client_contacts WHERE contact_id = %s AND client_id = %s"
+        query = "DELETE FROM relationships WHERE contact_id = %s AND client_id = %s"
         self.db.execute_query(query, (contact_id, client_id))
 
     def list_linked_contacts(self, client_code):
@@ -80,7 +80,7 @@ class ContactController:
         return self.contact_model.list_linked_to_client(client_id)
 
     def unlink_contact_from_client(self, client_id, contact_id):
-        query = "DELETE FROM client_contacts WHERE client_id = %s AND contact_id = %s"
+        query = "DELETE FROM relationships WHERE client_id = %s AND contact_id = %s"
         self.db.execute_query(query, (client_id, contact_id))
     def create_contact(self, name, surname, email):
         self.contact_model.create(name, surname, email)
@@ -106,7 +106,7 @@ class ContactController:
         print(f"Checking link status for client ID: {client_id} and contact ID: {contact_id}")
 
         # Check if the link already exists
-        check_query = "SELECT * FROM client_contacts WHERE client_id = %s AND contact_id = %s"
+        check_query = "SELECT * FROM relationships WHERE client_id = %s AND contact_id = %s"
         existing_link = self.db.fetch_one(check_query, (client_id, contact_id))
 
         if existing_link:
@@ -114,7 +114,7 @@ class ContactController:
             raise Exception(f"Client '{client_code}' and Contact '{contact_email}' are already linked.")
 
         # Prepare the SQL query to link client and contact
-        query = "INSERT INTO client_contacts (client_id, contact_id) VALUES (%s, %s)"
+        query = "INSERT INTO relationships (client_id, contact_id) VALUES (%s, %s)"
 
         try:
             self.db.execute_query(query, (client_id, contact_id))
