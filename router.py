@@ -2,18 +2,21 @@ import json
 from http.server import BaseHTTPRequestHandler
 
 from controllers.controllers import ClientController, ContactController
-from controllers.creation_controller import CreationController
-from controllers.linked_controller import LinkedController
-from controllers.linking_controller import LinkingController
+
+from controllers.relationship_controller import RelationshipController
+from services.relationship_service import RelationshipService
 
 
 class RequestHandler(BaseHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         self.client_controller = ClientController()
         self.contact_controller = ContactController(self.client_controller)
-        self.linking_controller = LinkingController(self.client_controller, self.contact_controller)
-        self.linked_controller = LinkedController(self.client_controller, self.contact_controller)
-        self.creation_controller = CreationController(self.client_controller, self.contact_controller)
+        self.relationship_service = RelationshipService(self.client_controller, self.contact_controller)
+
+        # Pass only the service to the RelationshipController
+        self.linking_controller = RelationshipController(self.relationship_service)
+        self.linked_controller = RelationshipController(self.relationship_service)
+
         super().__init__(*args, **kwargs)
 
     def _set_headers(self, status_code=200):
@@ -32,7 +35,7 @@ class RequestHandler(BaseHTTPRequestHandler):
         if self.path == '/clients':
             self.handle_list_clients()
         elif self.path.startswith('/contacts/') and self.path.endswith('/clients'):
-            self.linked_controller.list_linked_clients_for_contact(self.path, self._set_headers, self.write_response)
+            self.linked_controller.list_linked_clients(self.path, self._set_headers, self.write_response)
         elif self.path.startswith('/clients/') and self.path.endswith('/contacts'):
             self.linked_controller.list_linked_contacts(self.path, self._set_headers, self.write_response)
         elif self.path.startswith('/contacts/') and len(self.path.split('/')) == 3:
@@ -82,7 +85,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def handle_create_client(self, data):
         try:
-            response = self.creation_controller.create_client(data)
+            response = self.client_controller.create_client(data)
             self._set_headers(201)
             self.wfile.write(json.dumps(response).encode())
         except ValueError as e:
@@ -94,7 +97,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def handle_create_contact(self, data):
         try:
-            response = self.creation_controller.create_contact(data)
+            response = self.contact_controller.create_contact(data)
             self._set_headers(201)
             self.wfile.write(json.dumps(response).encode())
         except ValueError as e:
@@ -103,5 +106,3 @@ class RequestHandler(BaseHTTPRequestHandler):
         except Exception as e:
             self._set_headers(500)
             self.wfile.write(json.dumps({'error': 'Internal Server Error'}).encode())
-
-

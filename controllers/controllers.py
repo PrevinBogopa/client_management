@@ -10,10 +10,17 @@ class ClientController:
         self.client_model = Client(self.db)
         self.contact_model = Contact(self.db)  # Add Contact model for counting linked contacts
 
-    def create_client(self, name):
+    def create_client(self, data):
+        name = data.get('name')
+        if not name:
+            raise ValueError("Name is required")
+
         client_code = self.generate_client_code(name)
         self.client_model.create(name, client_code)
-        return client_code
+
+        return {'message': f"Client '{name}' created", 'client_code': client_code}
+
+
 
     def list_clients(self):
         clients = self.client_model.list()
@@ -82,8 +89,23 @@ class ContactController:
     def unlink_contact_from_client(self, client_id, contact_id):
         query = "DELETE FROM relationships WHERE client_id = %s AND contact_id = %s"
         self.db.execute_query(query, (client_id, contact_id))
-    def create_contact(self, name, surname, email):
-        self.contact_model.create(name, surname, email)
+
+    def create_contact(self, data):
+        name = data.get('name')
+        surname = data.get('surname')
+        email = data.get('email')
+
+        if not all([name, surname, email]):
+            raise ValueError("Name, surname, and email are required")
+
+        try:
+            self.contact_model.create(name, surname, email)
+            return {'message': f"Contact '{name} {surname}' created"}
+        except mysql.connector.errors.IntegrityError as e:
+            if e.errno == 1062:  # Duplicate entry
+                raise ValueError("Email already exists")
+            else:
+                raise Exception("Internal Server Error")
 
     def list_contacts(self):
         return self.contact_model.list()
