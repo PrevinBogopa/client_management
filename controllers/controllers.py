@@ -36,8 +36,14 @@ class ClientController:
             c.name ASC
         """
         return self.db.fetch_all(query, (contact_id,))
+
     def generate_client_code(self, name):
-        code = ''.join([c for c in name[:3].upper() if c.isalpha()]).ljust(3, 'A')
+        words = name.split()
+        code = ''.join([word[0].upper() for word in words[:3]])
+
+        if len(code) < 3:
+            code = code.ljust(3, 'A')
+
         counter = 1
         generated_code = f"{code}{counter:03d}"
 

@@ -1,19 +1,10 @@
 import json
 from http.server import BaseHTTPRequestHandler
 
-import mysql
-
 from controllers.controllers import ClientController, ContactController
-from controllers.linking_controller import LinkingController
+from controllers.creation_controller import CreationController
 from controllers.linked_controller import LinkedController
-# from utils import _set_headers, handle_not_found
-
-def handle_not_found(self, resource, resource_name):
-    if not resource:
-        self._set_headers(404)
-        self.wfile.write(json.dumps({'error': f'{resource_name} not found'}).encode())
-        return True
-    return False
+from controllers.linking_controller import LinkingController
 
 
 class RequestHandler(BaseHTTPRequestHandler):
@@ -22,12 +13,12 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.contact_controller = ContactController(self.client_controller)
         self.linking_controller = LinkingController(self.client_controller, self.contact_controller)
         self.linked_controller = LinkedController(self.client_controller, self.contact_controller)
+        self.creation_controller = CreationController(self.client_controller, self.contact_controller)
         super().__init__(*args, **kwargs)
 
     def _set_headers(self, status_code=200):
         self.send_response(status_code)
         self.send_header('Content-type', 'application/json')
-
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE')
         self.send_header('Access-Control-Allow-Headers', 'X-Requested-With, Content-type')
@@ -90,39 +81,28 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.handle_list(self.contact_controller.list_contacts, 'Contacts')
 
     def handle_create_client(self, data):
-        name = data.get('name')
-        if not name:
+        try:
+            response = self.creation_controller.create_client(data)
+            self._set_headers(201)
+            self.wfile.write(json.dumps(response).encode())
+        except ValueError as e:
             self._set_headers(400)
-            self.wfile.write(json.dumps({'error': 'Name is required'}).encode())
-            return
-
-        client_code = self.client_controller.create_client(name)
-        self._set_headers(201)
-        self.wfile.write(json.dumps({'message': f"Client '{name}' created", 'client_code': client_code}).encode())
+            self.wfile.write(json.dumps({'error': str(e)}).encode())
+        except Exception as e:
+            self._set_headers(500)
+            self.wfile.write(json.dumps({'error': 'Internal Server Error'}).encode())
 
     def handle_create_contact(self, data):
-        name = data.get('name')
-        surname = data.get('surname')
-        email = data.get('email')
-
-        if not all([name, surname, email]):
-            self._set_headers(400)
-            self.wfile.write(json.dumps({'error': 'Name, surname, and email are required'}).encode())
-            return
-
         try:
-            self.contact_controller.create_contact(name, surname, email)
+            response = self.creation_controller.create_contact(data)
             self._set_headers(201)
-            self.wfile.write(json.dumps({'message': f"Contact '{name} {surname}' created"}).encode())
-        except mysql.connector.errors.IntegrityError as e:
-            if e.errno == 1062:  # Duplicate entry
-                self._set_headers(400)
-                self.wfile.write(json.dumps({'error': 'Email already exists'}).encode())
-            else:
-                self._set_headers(500)
-                self.wfile.write(json.dumps({'error': 'Internal Server Error'}).encode())
-
-
+            self.wfile.write(json.dumps(response).encode())
+        except ValueError as e:
+            self._set_headers(400)
+            self.wfile.write(json.dumps({'error': str(e)}).encode())
+        except Exception as e:
+            self._set_headers(500)
+            self.wfile.write(json.dumps({'error': 'Internal Server Error'}).encode())
 
 # #
 # # //Routes.client...contacts..etc,polymofysms....controlle rconnect response from model to req...router...endpoint to front end.database helpeer...data laye
