@@ -41,7 +41,7 @@ The repository is organized into the following main directories:
 
 ## **Frontend Repository**
 
-The frontend repository can be found at: [insert link to React frontend repo]
+The frontend repository can be found at: [(https://github.com/PrevinBogopa/Client-Data-Capture-UI)]
 
 ## **Getting Started**
 
