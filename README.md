@@ -1,6 +1,4 @@
-Certainly! Here's a reformatted version of the README content with consistent styling:
-
----
+ ---
 
 # **DataCapture Backend**
 
@@ -111,4 +109,3 @@ This setup enables the application to handle incoming HTTP requests and route th
 
 ---
 
-Let me know if you need any further adjustments!
