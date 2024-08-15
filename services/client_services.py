@@ -62,9 +62,15 @@ class ClientService:
     def generate_client_code(self, name):
         words = name.split()
         code = ''.join([word[0].upper() for word in words[:3]])
+        code = code[:3]
 
-        if len(code) < 3:
-            code = code.ljust(3, 'A')
+        if len(words) == 1:
+            code = name[:3].upper()
+            if len(code) < 3:
+                code = code.ljust(3, 'A').upper()
+        else:
+            if len(code) < 3:
+                code = code.ljust(3, 'A').upper()
 
         counter = 1
         generated_code = f"{code}{counter:03d}"
@@ -74,9 +80,6 @@ class ClientService:
             generated_code = f"{code}{counter:03d}"
 
         return generated_code
-
-
-
     def get_by_code(self, client_code):
         query = "SELECT id, name, client_code FROM clients WHERE client_code = %s"
         result = self.db.fetch_one(query, (client_code,))
