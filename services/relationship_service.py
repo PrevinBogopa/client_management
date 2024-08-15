@@ -1,5 +1,10 @@
+from models.database_model import Database
+from services.contact_services import ContactService
+
+
 class RelationshipService:
     def __init__(self, client_controller, contact_controller):
+        self.db = Database()
         self.client_controller = client_controller
         self.contact_controller = contact_controller
 
@@ -51,7 +56,8 @@ class RelationshipService:
         if not client:
             raise ValueError('Client not found')
 
-        self.contact_controller.unlink_client_from_contact(contact['id'], client['id'])
+        # Accessing dictionary values rather than attributes
+        self.contact_controller.unlink_client_from_contact(contact['id'], client.id)
 
     def unlink_contact_from_client(self, client_code, contact_email):
         client = self.client_controller.get_by_code(client_code)
@@ -62,4 +68,4 @@ class RelationshipService:
         if not contact:
             raise ValueError('Contact not found')
 
-        self.contact_controller.unlink_contact_from_client(client['id'], contact['id'])
+        self.contact_controller.unlink_contact_from_client(client.id, contact['id'])

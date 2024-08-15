@@ -1,7 +1,9 @@
 import json
+import traceback
 from http.server import BaseHTTPRequestHandler
 
-from controllers.controllers import ClientController, ContactController
+from controllers.contact_controller import ContactController
+from controllers.client_controller import ClientController
 
 from controllers.relationship_controller import RelationshipController
 from services.relationship_service import RelationshipService
@@ -78,26 +80,29 @@ class RequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps(resources).encode())
 
     def handle_list_clients(self):
-        self.handle_list(self.client_controller.list_clients, 'Clients')
+        self.handle_list(self.client_controller.list, 'Clients')
 
     def handle_list_contacts(self):
-        self.handle_list(self.contact_controller.list_contacts, 'Contacts')
+        self.handle_list(self.contact_controller.list, 'Contacts')
 
     def handle_create_client(self, data):
         try:
-            response = self.client_controller.create_client(data)
+            response = self.client_controller.create(data)
             self._set_headers(201)
             self.wfile.write(json.dumps(response).encode())
         except ValueError as e:
             self._set_headers(400)
             self.wfile.write(json.dumps({'error': str(e)}).encode())
         except Exception as e:
+            # Log the detailed error
+            error_message = str(e)
+            traceback_str = traceback.format_exc()
+            print(f"Internal Server Error: {error_message}\n{traceback_str}")
             self._set_headers(500)
             self.wfile.write(json.dumps({'error': 'Internal Server Error'}).encode())
-
     def handle_create_contact(self, data):
         try:
-            response = self.contact_controller.create_contact(data)
+            response = self.contact_controller.create(data)
             self._set_headers(201)
             self.wfile.write(json.dumps(response).encode())
         except ValueError as e:

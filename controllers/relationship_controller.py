@@ -38,24 +38,35 @@ class RelationshipController:
 
     def unlink_client_from_contact(self, path, set_headers, write_response):
         try:
+            # Split the path to extract parameters
+            parts = path.strip('/').split('/')
 
-            parts = path.split('/')
-            if len(parts) < 4:
+            # Validate URL format
+            if len(parts) < 3:
                 set_headers(400)
                 write_response({'error': 'Invalid URL format'})
                 return
 
-            client_code = parts[3]
-            contact_email = parts[2]
+            # Extract client_code and contact_email
+            contact_email = parts[1]  # Corrected index
+            client_code = parts[2]  # Corrected index
 
+            # Call the service method to perform the unlinking
             self.relationship_service.unlink_client_from_contact(client_code, contact_email)
 
+            # Send success response
             set_headers(200)
             write_response({'message': f"Client '{client_code}' unlinked from contact '{contact_email}'"})
+        except ValueError as ve:
+            # Handle specific ValueErrors
+            print(f"Error: {str(ve)}")
+            set_headers(400)
+            write_response({'error': str(ve)})
         except Exception as e:
-            print(f"Error: {str(e)}")  # Log the error for debugging
+            # Handle other exceptions
+            print(f"Error: {str(e)}")
             set_headers(500)
-            write_response({'error': str(e)})
+            write_response({'error': 'Internal Server Error'})
 
     def unlink_contact_from_client(self, path, set_headers, write_response):
         parts = path.split('/')
