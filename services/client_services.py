@@ -60,7 +60,12 @@ class ClientService:
         return self.db.fetch_all(query, (contact_id,))
 
     def generate_client_code(self, name):
-        words = name.split()
+
+        name = name.strip()
+
+
+        words = [word for word in name.split() if word]
+
         code = ''.join([word[0].upper() for word in words[:3]])
         code = code[:3]
 
