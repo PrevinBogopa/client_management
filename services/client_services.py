@@ -90,4 +90,4 @@ class ClientService:
         result = self.db.fetch_one(query, (client_code,))
         if result:
             return Client(id=result['id'], name=result['name'], client_code=result['client_code'])
-        return None
+        return  None
